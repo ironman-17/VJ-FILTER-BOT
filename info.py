@@ -4,6 +4,7 @@
 
 
 import re
+import os
 from os import environ
 from Script import script 
 
@@ -195,4 +196,12 @@ else:
 
 # Don't Remove Credit @VJ_Botz
 # Subscribe YouTube Channel For Amazing Bot @Tech_VJ
+
+DIRECT_GEN_DB = int(os.environ.get("DIRECT_GEN_DB", "-1001740524004"))
+DIRECT_GEN_URL = os.environ.get("DIRECT_GEN_URL", "https://web-ikkst7anqzvo.up-de-fra1-k8s-1.apps.run-on-seenode.com/")
+DIRECT_GEN = bool(DIRECT_GEN_DB and DIRECT_GEN_URL)
+POST_MODE= bool(environ.get('POST_MODE', True))
+POST_SHORT_API = environ.get('POST_SHORT_API', '69bfe45fc35b6b3178b4b95de9ef1db14a746ce7')
+POST_SHORT_URL = environ.get('POST_SHORT_URL', 'Modijiurl.com')
+HOW_TO_POST_SHORT = environ.get('HOW_TO_POST_SHORT', 'https://t.me/How_To_Get_Movie')
 # Ask Doubt on telegram @KingVJ01
