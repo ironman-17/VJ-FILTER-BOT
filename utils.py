@@ -736,3 +736,84 @@ async def get_seconds(time_string):
         return value * 86400 * 365
     else:
         return 0
+  import re
+import requests
+from pyrogram import Client
+from urllib.parse import quote_plus
+
+# Constants for short link service (you can replace it with your own)
+SHORT_LINK_API = "https://api.short.io/links"
+
+# Replace with your actual Telegram username (without '@')
+U_NAME = "your_username"
+
+# Function to clean the movie title (remove unwanted characters)
+def clean_title(title):
+    return re.sub(r"[^a-zA-Z0-9\s]", "", title).strip()
+
+# Function to get movie poster using IMDb API
+async def get_poster(movie_name: str):
+    try:
+        # IMDb API to get poster URL (or use an alternative like OMDB API)
+        url = f"http://www.omdbapi.com/?t={quote_plus(movie_name)}&apikey=YOUR_OMDB_API_KEY"
+        response = requests.get(url)
+        data = response.json()
+
+        if data.get("Response") == "True":
+            return {"poster": data.get("Poster")}
+        else:
+            return None
+    except Exception as e:
+        print(f"Error fetching poster: {e}")
+        return None
+
+# Function to generate a short URL
+async def short_link(long_url: str):
+    try:
+        # Here you can integrate with a link shortening API (e.g., short.io or bit.ly)
+        params = {
+            "domain": "short.io",  # Replace with actual domain API if needed
+            "originalURL": long_url
+        }
+        headers = {
+            "Authorization": "Bearer YOUR_API_KEY"  # Replace with your API Key from Short.io
+        }
+
+        response = requests.post(SHORT_LINK_API, json=params, headers=headers)
+        data = response.json()
+        
+        # If the link shortening API is successful, return the short URL
+        if response.status_code == 200:
+            return data.get('shortURL')
+        else:
+            print("Failed to shorten the URL.")
+            return long_url  # Return the original URL if shortening fails
+    except Exception as e:
+        print(f"Error shortening URL: {e}")
+        return long_url  # Return the original URL in case of error
+
+# Function to get the size of a file
+def get_size(size_in_bytes: int):
+    size_units = ["B", "KB", "MB", "GB", "TB"]
+    index = 0
+    size = size_in_bytes
+
+    while size >= 1024 and index < len(size_units) - 1:
+        size /= 1024
+        index += 1
+
+    return f"{size:.2f} {size_units[index]}"
+
+# Function to handle message reply removal (optional)
+async def delete_previous_reply(chat_id):
+    try:
+        if chat_id in user_states and "last_reply" in user_states[chat_id]:
+            last_reply_message = user_states[chat_id]["last_reply"]
+            await last_reply_message.delete()
+    except Exception as e:
+        print(f"Error deleting previous reply: {e}")
+
+# Function to unpack the file ID (just a placeholder, modify according to actual file ID unpacking logic)
+def unpack_new_file_id(file_id):
+    # Logic to unpack or process file ID if needed
+    return file_id  # Example return (can be customized)
