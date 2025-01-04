@@ -97,3 +97,102 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         logging.info('Service Stopped Bye 👋')
 
+from pyrogram import Client, filters  # Required imports
+import re  # For text processing
+
+# Global variables
+user_states = {}  # Manage user states during interaction
+DIRECT_GEN_DB = -100123456789  # Replace with your target channel/group ID
+ADMINS = [123456789, 987654321]  # Replace with Telegram user IDs of admins
+
+# Utility function: Clean title
+def clean_title(title):
+    return re.sub(r"\s+", " ", title).strip()
+
+# Main function: Handle `/post` command
+@Client.on_message(filters.command("post") & filters.user(ADMINS))
+async def post_command(client, message):
+    try:
+        await message.reply(
+            "**Wᴇʟᴄᴏᴍᴇ Tᴏ Usᴇ Oᴜʀ Rᴀʀᴇ Mᴏᴠɪᴇ Pᴏsᴛ Fᴇᴀᴛᴜʀᴇ :)**\n\n"
+            "**👉🏻 Sᴇɴᴅ ᴛʜᴇ ɴᴜᴍʙᴇʀ ᴏғ ғɪʟᴇs ʏᴏᴜ ᴡᴀɴᴛ ᴛᴏ ᴀᴅᴅ 👈🏻**\n\n"
+            "**‼️ Nᴏᴛᴇ: Oɴʟʏ ɴᴜᴍʙᴇʀs ᴀʟʟᴏᴡᴇᴅ**",
+            disable_web_page_preview=True,
+        )
+        user_states[message.chat.id] = {"state": "awaiting_num_files"}
+    except Exception as e:
+        await message.reply(f"Error occurred: {e}")
+
+# Function: Handle file uploads and title input
+@Client.on_message(filters.private & (filters.text | filters.media) & ~filters.command("post"))
+async def handle_message(client, message):
+    try:
+        chat_id = message.chat.id
+
+        # Check if user is in a session
+        if chat_id in user_states:
+            current_state = user_states[chat_id]["state"]
+
+            # Step 1: Expect number of files
+            if current_state == "awaiting_num_files":
+                try:
+                    num_files = int(message.text.strip())
+
+                    if num_files <= 0:
+                        await message.reply("⏩ Pʟᴇᴀsᴇ sᴇɴᴅ ᴀ ᴘᴏsɪᴛɪᴠᴇ ɴᴜᴍʙᴇʀ.")
+                        return
+
+                    user_states[chat_id] = {
+                        "state": "awaiting_files",
+                        "num_files": num_files,
+                        "files_received": 0,
+                        "file_ids": [],
+                        "file_sizes": [],
+                    }
+
+                    await message.reply("**⏩ Fᴏʀᴡᴀʀᴅ Tʜᴇ ғɪʀsᴛ ғɪʟᴇ**")
+                except ValueError:
+                    await message.reply("**Invalid input. Please send a valid number.**")
+
+            # Step 2: Expect file uploads
+            elif current_state == "awaiting_files":
+                if not message.media:
+                    await message.reply("⏩ Pʟᴇᴀsᴇ ғᴏʀᴡᴀʀᴅ ᴀ ғɪʟᴇ.")
+                    return
+
+                file_id = message.message_id  # Store file message ID
+                user_states[chat_id]["file_ids"].append(file_id)
+                user_states[chat_id]["files_received"] += 1
+
+                files_left = (
+                    user_states[chat_id]["num_files"] - user_states[chat_id]["files_received"]
+                )
+
+                if files_left > 0:
+                    await message.reply(f"**⏩ Fᴏʀᴡᴀʀᴅ Tʜᴇ ɴᴇxᴛ ғɪʟᴇ (ᴛᴏᴛᴀʟ: {files_left})**")
+                else:
+                    await message.reply("**Nᴏᴡ, sᴇɴᴅ ᴛʜᴇ ᴍᴏᴠɪᴇ Tɪᴛʟᴇ ᴏʀ Nᴀᴍᴇ.**")
+                    user_states[chat_id]["state"] = "awaiting_title"
+
+            # Step 3: Expect title
+            elif current_state == "awaiting_title":
+                title = message.text.strip()
+                title_clean = clean_title(title)
+
+                # Generate file info
+                file_info = "\n\n".join(
+                    [f"》File ID: {file_id}" for file_id in user_states[chat_id]["file_ids"]]
+                )
+
+                summary = (
+                    f"**🎬 {title_clean}**\n\n"
+                    f"**📂 Files Uploaded:**\n\n{file_info}\n\n"
+                    "**⚡ Thank you for using the bot!**"
+                )
+
+                await message.reply(summary)
+                del user_states[chat_id]  # Clear user session
+
+    except Exception as e:
+        await message.reply(f"Error occurred: {e}")
+        
