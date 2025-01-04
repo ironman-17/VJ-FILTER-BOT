@@ -1615,4 +1615,12 @@ async def handle_movie_title(client, message):
         await message.reply(f"Error occurred: {e}")
 
 # Run the bot
-app.run()
+import asyncio
+
+async def start_bot():
+    await app.start()
+    await idle()
+
+if __name__ == "__main__":
+    asyncio.run(start_bot())
+
