@@ -1510,8 +1510,8 @@ async def purge_requests(client, message):
 from pyrogram import Client, filters, idle
 import re
 
-ADMINS = [12345678, 87654321]  # Replace with admin user IDs
-DIRECT_GEN_DB = -100123456789  # Replace with your target chat ID
+ADMINS = [6283322330]  # Replace in user IDs
+DIRECT_GEN_DB = -1002473385674  # Replace with your target chat ID
 DEFAULT_POSTER = "https://example.com/default-poster.jpg"
 user_states = {}
 
