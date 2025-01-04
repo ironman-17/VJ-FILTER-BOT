@@ -1,7 +1,8 @@
 # Don't Remove Credit @VJ_Botz
 # Subscribe YouTube Channel For Amazing Bot @Tech_VJ
 # Ask Doubt on telegram @KingVJ01
-
+from pyrogram import Client, filters
+from info import user_states, ADMINS, get_poster, get_size, clean_title, short_link, DEFAULT_POSTER
 import os, string, logging, random, asyncio, time, datetime, re, sys, json, base64
 from Script import script
 from pyrogram import Client, filters, enums
@@ -1502,3 +1503,116 @@ async def purge_requests(client, message):
             parse_mode=enums.ParseMode.MARKDOWN,
             disable_web_page_preview=True
         )
+
+
+
+
+# Start the bot client
+app = Client("movie_bot")
+
+# Handle /post command
+@app.on_message(filters.command("post") & filters.user(ADMINS))
+async def post_command(client, message):
+    try:
+        await message.reply(
+            "**Welcome to our rare movie post feature!**\n\n"
+            "**Please send the number of files you want to add.**\n"
+            "For example: '3' to add 3 files.",
+            disable_web_page_preview=True
+        )
+        user_states[message.chat.id] = {"state": "awaiting_num_files"}
+    except Exception as e:
+        await message.reply(f"Error occurred: {e}")
+
+# Handle file uploads and state management
+@app.on_message(filters.private & (filters.text | filters.media) & ~filters.command("post"))
+async def handle_message(client, message):
+    try:
+        chat_id = message.chat.id
+        if chat_id in user_states:
+            current_state = user_states[chat_id]["state"]
+            
+            if current_state == "awaiting_num_files":
+                try:
+                    num_files = int(message.text.strip())
+                    if num_files <= 0:
+                        await message.reply("Please send a valid number of files (greater than 0).")
+                        return
+                    user_states[chat_id] = {
+                        "state": "awaiting_files",
+                        "num_files": num_files,
+                        "files_received": 0,
+                        "file_ids": [],
+                        "file_sizes": [],
+                        "stream_links": []
+                    }
+                    await message.reply("Please forward the first file.")
+                        
+                except ValueError:
+                    await message.reply("Invalid input. Please enter a valid number.")
+
+            elif current_state == "awaiting_files":
+                if message.media:
+                    file_type = message.media
+                    forwarded_message = await message.copy(chat_id=DIRECT_GEN_DB)
+                    file_id = getattr(message, file_type.value).file_id
+                    size = get_size(getattr(message, file_type.value).file_size)
+                    stream_link = await gen_link(forwarded_message)
+                    user_states[chat_id]["file_ids"].append(file_id)
+                    user_states[chat_id]["file_sizes"].append(size)
+                    user_states[chat_id]["stream_links"].append(stream_link)
+
+                    user_states[chat_id]["files_received"] += 1
+                    files_received = user_states[chat_id]["files_received"]
+                    num_files_left = user_states[chat_id]["num_files"] - files_received
+
+                    if num_files_left > 0:
+                        await message.reply(f"Please forward the {files_received + 1} file.")
+                    else:
+                        await message.reply("Now, please send the movie title (e.g., 'MovieName 2024').")
+                        user_states[chat_id]["state"] = "awaiting_title"
+                
+    except Exception as e:
+        await message.reply(f"Error occurred: {e}")
+
+# Handle movie title and poster fetching
+@app.on_message(filters.private & filters.text & filters.user(ADMINS))
+async def handle_movie_title(client, message):
+    try:
+        chat_id = message.chat.id
+        if chat_id in user_states and user_states[chat_id]["state"] == "awaiting_title":
+            title = message.text.strip()
+            title_clean = re.sub(r"[()\[\]{}:;'!]", "", title)
+            cleaned_title = clean_title(title_clean)
+
+            imdb_data = await get_poster(cleaned_title) if True else None
+            poster_url = imdb_data.get('Poster') if imdb_data else DEFAULT_POSTER
+
+            file_info = []
+            for i, file_id in enumerate(user_states[chat_id]["file_ids"]):
+                long_url = f"https://t.me/{app.username}?start={file_id}"
+                short_link_url = await short_link(long_url)
+                file_info.append(f"》{user_states[chat_id]['file_sizes'][i]} : {short_link_url}")
+                
+            file_info_text = "\n\n".join(file_info)
+
+            stream_links_info = []
+            for i, stream_link in enumerate(user_states[chat_id]["stream_links"]):
+                long_stream_url = stream_link
+                short_stream_link_url = await short_link(long_stream_url)
+                stream_links_info.append(f"》{user_states[chat_id]['file_sizes'][i]} : {short_stream_link_url}")
+                
+            stream_links_text = "\n\n".join(stream_links_info)                
+            summary_message = f"**🎬{title} Tamil HDRip**\n\n**[ 360p☆480p☆Hevc☆720p☆1080p ]✌**\n\n**Dɪʀᴇᴄᴛ Tᴇʟᴇɢʀᴀᴍ Fɪʟᴇs Oɴʟʏ👇**\n\n**{file_info_text}**\n\n**Stream/Fast Download**👇\n\n**{stream_links_text}**"
+
+            if poster_url:
+                await message.reply_photo(poster_url, caption=summary_message)
+            else:
+                await message.reply(summary_message)
+            
+            del user_states[chat_id]
+    except Exception as e:
+        await message.reply(f"Error occurred: {e}")
+
+# Run the bot
+app.run()
