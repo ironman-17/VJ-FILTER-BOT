@@ -97,3 +97,13 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         logging.info('Service Stopped Bye 👋')
 
+from plugins.post_handler import handle_post_command, handle_message
+
+@Client.on_message(filters.command("post") & filters.user(ADMINS))
+async def post_command(client, message):
+    await handle_post_command(client, message, user_states)
+
+@Client.on_message(filters.private & (filters.text | filters.media) & ~filters.command("post"))
+async def handle_user_message(client, message):
+    await handle_message(client, message, user_states, DIRECT_GEN_DB, temp, imdb_info, short_link)
+    
